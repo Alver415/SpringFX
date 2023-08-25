@@ -21,27 +21,19 @@ public class SpringFXBuilderFactory implements BuilderFactory {
     private static final JavaFXBuilderFactory DEFAULT_BUILDER_FACTORY = new JavaFXBuilderFactory();
 
     private final ApplicationContext context;
-    private final List<SpringFXBuilder<?>> builders;
-
-    @Bean
-    private Map<Class<?>, SpringFXBuilder<?>> getSpringFXBuilders() {
-        return builders.stream().collect(Collectors.toMap(
-                SpringFXBuilder::getType,
-                Function.identity()));
-    }
+    private final Map<Class<?>, SpringFXBuilder<?>> builderMap;
 
     public SpringFXBuilderFactory(
             ApplicationContext context,
-            List<SpringFXBuilder<?>> springFXBuilders) {
+            Map<Class<?>, SpringFXBuilder<?>> builderMap) {
         this.context = context;
-        this.builders = springFXBuilders;
+        this.builderMap = builderMap;
     }
 
     @Override
     public Builder<?> getBuilder(Class<?> type) {
-        Map<Class<?>, SpringFXBuilder<?>> map = getSpringFXBuilders();
-        if (map.containsKey(type)) {
-            return map.get(type);
+        if (builderMap.containsKey(type)) {
+            return builderMap.get(type);
         }
         if (AnnotationUtils.findAnnotation(type, FXMLAutoLoad.class) != null) {
             return new SpringProxyBuilder<>(context, type);
