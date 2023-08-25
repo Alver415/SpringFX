@@ -39,13 +39,11 @@ public class SpringFXAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(BuilderFactory.class)
     public BuilderFactory getBuilderFactory() {
         return new SpringFXBuilderFactory(context, getSpringFXBuilders());
     }
 
     @Bean
-    @ConditionalOnMissingBean(SpringFXLoader.class)
     public SpringFXLoader getSpringFXLoader() {
         return new SpringFXLoader(context, getBuilderFactory());
     }
