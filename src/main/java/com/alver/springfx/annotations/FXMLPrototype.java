@@ -12,8 +12,7 @@ import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROT
 @Inherited
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Component
-@Scope(SCOPE_PROTOTYPE)
+@Prototype
 @FXMLAutoLoad
 public @interface FXMLPrototype {
 

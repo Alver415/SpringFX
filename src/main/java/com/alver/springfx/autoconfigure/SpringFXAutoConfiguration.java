@@ -1,16 +1,15 @@
 package com.alver.springfx.autoconfigure;
 
+import com.alver.springfx.SpringFX;
 import com.alver.springfx.SpringFXBuilder;
 import com.alver.springfx.SpringFXBuilderFactory;
 import com.alver.springfx.SpringFXLoader;
+import com.alver.springfx.annotations.Prototype;
 import javafx.util.BuilderFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.AliasFor;
 
 import java.util.List;
 import java.util.Map;
@@ -39,12 +38,24 @@ public class SpringFXAutoConfiguration {
     }
 
     @Bean
-    public BuilderFactory getBuilderFactory() {
-        return new SpringFXBuilderFactory(context, getSpringFXBuilders());
+    public BuilderFactory getBuilderFactory(Map<Class<?>, SpringFXBuilder<?>> springFXBuilders) {
+        return new SpringFXBuilderFactory(context, springFXBuilders);
     }
 
     @Bean
-    public SpringFXLoader getSpringFXLoader() {
-        return new SpringFXLoader(context, getBuilderFactory());
+    public SpringFX getSpringFX() {
+        return new SpringFX(context);
+    }
+    @Bean
+    @Prototype
+    public SpringFXLoader getSpringFXLoader(
+            ApplicationContext applicationContext,
+            BuilderFactory builderFactory) {
+        SpringFXLoader loader = new SpringFXLoader();
+        loader.setApplicationContext(context);
+        loader.setControllerFactory(context::getBean);
+        loader.setBuilderFactory(builderFactory);
+
+        return loader;
     }
 }

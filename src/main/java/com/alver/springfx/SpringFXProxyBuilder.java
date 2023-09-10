@@ -1,7 +1,6 @@
 package com.alver.springfx;
 
 import com.alver.springfx.annotations.FXMLAutoLoad;
-import com.alver.springfx.annotations.FXMLComponent;
 import com.alver.springfx.util.DelegatingMap;
 import com.sun.javafx.fxml.BeanAdapter;
 import com.sun.javafx.fxml.ModuleHelper;
@@ -14,19 +13,19 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
 
-public class SpringProxyBuilder<T> extends SpringFXBuilder<T> implements DelegatingMap<String, Object> {
+public class SpringFXProxyBuilder<T> extends SpringFXBuilder<T> implements DelegatingMap<String, Object> {
 
     private final ApplicationContext context;
     private final Map<String, Object> delegateMap = new HashMap<>();
 
 
-    private final Map<String, SpringProxyBuilder.Property> propertiesMap;
+    private final Map<String, SpringFXProxyBuilder.Property> propertiesMap;
     private Set<String> propertyNames;
 
     private static final String SETTER_PREFIX = "set";
     private static final String GETTER_PREFIX = "get";
 
-    public SpringProxyBuilder(ApplicationContext context, Class<T> type) {
+    public SpringFXProxyBuilder(ApplicationContext context, Class<T> type) {
         super(type);
         this.context = context;
         this.propertiesMap = scanForSetters();
@@ -63,7 +62,7 @@ public class SpringProxyBuilder<T> extends SpringFXBuilder<T> implements Delegat
         // return ArrayListWrapper now and convert it to proper type later
         // during the build - once we know which constructor we will use
         // and what types it accepts
-        return new SpringProxyBuilder.ArrayListWrapper<>();
+        return new SpringFXProxyBuilder.ArrayListWrapper<>();
     }
 
     @Override
@@ -124,12 +123,12 @@ public class SpringProxyBuilder<T> extends SpringFXBuilder<T> implements Delegat
     private T createObjectFromContext() throws RuntimeException {
         T retObj = context.getBean(type);
         if (AnnotationUtils.findAnnotation(type, FXMLAutoLoad.class) != null){
-            SpringFXLoader springFXLoader = context.getBean(SpringFXLoader.class);
-            springFXLoader.load(retObj);
+            SpringFX springFX = context.getBean(SpringFX.class);
+            springFX.load(retObj);
         }
         for (String propName : propertyNames) {
             try {
-                SpringProxyBuilder.Property property = propertiesMap.get(propName);
+                SpringFXProxyBuilder.Property property = propertiesMap.get(propName);
                 property.invoke(retObj, getUserValue(propName, property.getType()));
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
@@ -161,7 +160,7 @@ public class SpringProxyBuilder<T> extends SpringFXBuilder<T> implements Delegat
             }
         }
 
-        if (SpringProxyBuilder.ArrayListWrapper.class.equals(val.getClass())) {
+        if (SpringFXProxyBuilder.ArrayListWrapper.class.equals(val.getClass())) {
             // user given value is an ArrayList but the constructor doesn't
             // accept an ArrayList so the ArrayList comes from
             // the getTemporaryContainer method
@@ -224,7 +223,7 @@ public class SpringProxyBuilder<T> extends SpringFXBuilder<T> implements Delegat
         public abstract void invoke(Object obj, Object argStr) throws Exception;
     }
 
-    private static class Setter extends SpringProxyBuilder.Property {
+    private static class Setter extends SpringFXProxyBuilder.Property {
 
         public Setter(Method m, Class<?> t) {
             super(m, t);
@@ -236,7 +235,7 @@ public class SpringProxyBuilder<T> extends SpringFXBuilder<T> implements Delegat
         }
     }
 
-    private static class Getter extends SpringProxyBuilder.Property {
+    private static class Getter extends SpringFXProxyBuilder.Property {
 
         public Getter(Method m, Class<?> t) {
             super(m, t);
