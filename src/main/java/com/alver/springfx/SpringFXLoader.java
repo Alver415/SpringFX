@@ -25,6 +25,7 @@ import javafx.scene.Node;
 import javafx.util.Builder;
 import javafx.util.BuilderFactory;
 import javafx.util.Callback;
+import javafx.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -44,6 +45,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 
 /**
@@ -916,11 +918,6 @@ public class SpringFXLoader {
             namespace.put(LOCATION_KEY, location);
             namespace.put(RESOURCES_KEY, resources);
             namespace.put(CONTEXT_KEY, applicationContext);
-            for (String beanName : applicationContext.getBeanDefinitionNames()) {
-                if (applicationContext.isSingleton(beanName)) {
-                    namespace.put(CONTEXT_KEY + "." + beanName, applicationContext.getBean(beanName));
-                }
-            }
 
             // Clear the script engine
             scriptEngine = null;
@@ -1860,9 +1857,6 @@ public class SpringFXLoader {
         public void processPropertyAttribute(Attribute attribute) throws IOException {
             String value = attribute.value;
             if (isBindingExpression(value)) {
-                // Resolve the expression
-                Expression expression;
-
                 if (attribute.sourceType != null) {
                     throw constructLoadException("Cannot bind to static property.");
                 }
@@ -1879,16 +1873,15 @@ public class SpringFXLoader {
 
                 if (!isStaticLoad()) {
                     value = value.substring(BINDING_EXPRESSION_PREFIX.length(),
-                            value.length() - 1);
-                    expression = Expression.valueOf(value);
-
-                    // Create the binding
+                            value.length() - BINDING_EXPRESSION_SUFFIX.length());
                     BeanAdapter targetAdapter = new BeanAdapter(this.value);
                     ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
-                    Class<?> type = targetAdapter.getType(attribute.name);
 
                     if (propertyModel instanceof Property<?>) {
-                        ((Property<Object>) propertyModel).bind(new ExpressionValue(namespace, expression, type));
+                        Class<?> type = targetAdapter.getType(attribute.name);
+                        Expression expression = Expression.valueOf(value);
+                        ExpressionValue expressionValue = new ExpressionValue(namespace, expression, type);
+                        ((Property<Object>) propertyModel).bind(expressionValue);
                     }
                 }
             } else if (isBidirectionalBindingExpression(value)) {
