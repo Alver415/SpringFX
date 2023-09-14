@@ -25,7 +25,6 @@ import javafx.scene.Node;
 import javafx.util.Builder;
 import javafx.util.BuilderFactory;
 import javafx.util.Callback;
-import javafx.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -45,7 +44,6 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 
 /**
@@ -1886,10 +1884,10 @@ public class SpringFXLoader {
                 }
             } else if (isBidirectionalBindingExpression(value)) {
                 try {
-                    String string = value.substring(BI_DIRECTIONAL_BINDING_PREFIX.length(),
+                    value = value.substring(BI_DIRECTIONAL_BINDING_PREFIX.length(),
                             value.length() - BI_DIRECTIONAL_BINDING_SUFFIX.length());
 
-                    String[] split = string.split(DEFAULT_VALUE_DELIMITER, 2);
+                    String[] split = value.split(DEFAULT_VALUE_DELIMITER, 2);
                     String key = split[0];
                     String defaultValue = split.length == 2 ? split[1] : null;
 
@@ -1898,9 +1896,10 @@ public class SpringFXLoader {
                     ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
 
                     if (propertyModel instanceof Property fxmlProperty) {
-                        if (!namespace.containsKey(key)) {
-                            log.error("No entry for key: %s. Using default value: %s".formatted(key, defaultValue));
-                        } else if (namespace.get(key) instanceof Property bindProperty) {
+                        Expression expression = Expression.valueOf(value);
+                        ExpressionValue expressionValue = new ExpressionValue(namespace, expression, Property.class);
+
+                        if (expressionValue.getValue() instanceof Property bindProperty) {
                             log.debug("Bidirectional binding to: %s".formatted(key));
                             fxmlProperty.bindBidirectional(bindProperty);
                             if (this.value instanceof Node node) {
@@ -1916,7 +1915,7 @@ public class SpringFXLoader {
                         throw constructLoadException("Cannot bidirectionally bind to " + propertyModel.getClass());
                     }
                 } catch (Exception e) {
-                    log.error("Failed to bind bidirectional mapping with value:%s".formatted(value));
+                    log.error("Failed to bind bidirectional mapping with value:%s".formatted(value), e);
                 }
             } else {
                 processValue(attribute.sourceType, attribute.name, value);
