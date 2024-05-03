@@ -2,6 +2,7 @@ package com.alver.springfx;
 
 import com.alver.springfx.annotations.FXMLAutoLoad;
 import com.alver.springfx.model.FXMLControllerAndView;
+import javafx.scene.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +52,9 @@ public class SpringFX {
 	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
-	protected <Controller, View> FXMLControllerAndView<Controller, View> load(Class<Controller> clazz, Controller controller) {
+	protected <Controller, View> FXMLControllerAndView<Controller, View> load(
+			Class<Controller> clazz,
+			Controller controller) {
 		Objects.requireNonNull(AnnotationUtils.findAnnotation(clazz, FXMLAutoLoad.class),
 				"%s is not annotated with @FXMLLoaded.".formatted(clazz.getSimpleName()));
 
@@ -64,8 +67,13 @@ public class SpringFX {
 		fxmlLoader.setResources(resources);
 		fxmlLoader.setClassLoader(classLoader);
 		fxmlLoader.setRoot(controller);
+		if (controller != null &&
+				(controller.getClass().isAssignableFrom(Node.class) ||
+						Node.class.isAssignableFrom(controller.getClass()))) {
+			fxmlLoader.setController(controller);
+		}
 
-		return switch (getMode(clazz)){
+		return switch (getMode(clazz)) {
 			case EAGER -> loadSimple(fxmlLoader);
 			case LAZY -> loadLazy(fxmlLoader);
 		};

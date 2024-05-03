@@ -7,7 +7,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface FXMLAutoLoad {
 
-    Mode mode() default Mode.LAZY;
+    Mode mode() default Mode.EAGER;
     String location() default "";
     String resourceBundle() default "";
 

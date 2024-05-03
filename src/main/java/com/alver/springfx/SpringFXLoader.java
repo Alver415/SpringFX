@@ -45,6 +45,8 @@ import java.nio.charset.Charset;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import static com.sun.javafx.fxml.BeanAdapter.PROPERTY_SUFFIX;
+
 
 /**
  * Loads an object hierarchy from an XML document.
@@ -1896,7 +1898,7 @@ public class SpringFXLoader {
                     ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
 
                     if (propertyModel instanceof Property fxmlProperty) {
-                        Expression expression = Expression.valueOf(value);
+                        Expression expression = Expression.valueOf(value + PROPERTY_SUFFIX);
                         ExpressionValue expressionValue = new ExpressionValue(namespace, expression, Property.class);
 
                         if (expressionValue.getValue() instanceof Property bindProperty) {
@@ -2500,10 +2502,6 @@ public class SpringFXLoader {
                                 + " can only be applied to root element.");
                     }
 
-                    if (controller != null) {
-                        throw constructLoadException("Controller value already specified.");
-                    }
-
                     if (!staticLoad) {
                         Class<?> type;
                         try {
@@ -2512,15 +2510,23 @@ public class SpringFXLoader {
                             throw constructLoadException(exception);
                         }
 
-                        try {
-                            if (controllerFactory == null) {
-                                ReflectUtil.checkPackageAccess(type);
-                                setController(type.getDeclaredConstructor().newInstance());
-                            } else {
-                                setController(controllerFactory.call(type));
+                        if (controller != null) {
+                            if (!(controller.getClass().isAssignableFrom(type) ||
+                                    type.isAssignableFrom(controller.getClass()))) {
+                                throw constructLoadException("Controller value already specified and types not assignable: %s, %s"
+                                        .formatted(controller.getClass(), type));
                             }
-                        } catch (Exception e) {
-                            throw constructLoadException(e);
+                        } else {
+                            try {
+                                if (controllerFactory == null) {
+                                    ReflectUtil.checkPackageAccess(type);
+                                    setController(type.getDeclaredConstructor().newInstance());
+                                } else {
+                                    setController(controllerFactory.call(type));
+                                }
+                            } catch (Exception e) {
+                                throw constructLoadException(e);
+                            }
                         }
                     }
                 } else {

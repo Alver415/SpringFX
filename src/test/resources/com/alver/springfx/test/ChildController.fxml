@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+<?import com.alver.springfx.test.CustomNode?>
+<BorderPane xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.alver.springfx.test.ChildController">
+    <top>
+        <VBox>
+            <Button fx:id="button" text="Incorrect Child Button" onAction="#log"/>
+            <CustomNode text="test"/>
+            <CustomNode/>
+        </VBox>
+    </top>
+</BorderPane>
