@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.Scene?>
+<Scene xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1"
+	   fx:controller="com.alver.springfx.test.bidi.BidirectionalBindingTestController">
+	<VBox>
+		<TextField fx:id="text1"/>
+		<TextField fx:id="text2" text="${text1.text}"/>
+		<TextField fx:id="text3" text="#{text2.text}"/>
+	</VBox>
+</Scene>

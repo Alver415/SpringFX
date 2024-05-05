@@ -1,4 +1,4 @@
-package com.alver.springfx.test;
+package com.alver.springfx.test.fxml;
 
 import com.alver.springfx.annotations.FXMLPrototype;
 import javafx.beans.property.SimpleStringProperty;
@@ -7,16 +7,14 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @FXMLPrototype
-public class BoldNode extends BorderPane {
+public class CustomNode extends BorderPane {
 
-    private static final Logger log = LoggerFactory.getLogger(BoldNode.class);
+    private static final Logger log = LoggerFactory.getLogger(CustomNode.class);
 
     private final StringProperty textProperty = new SimpleStringProperty();
     public StringProperty textProperty(){
@@ -36,10 +34,10 @@ public class BoldNode extends BorderPane {
 
     private TestBean testBean;
 
-    public BoldNode(){}
+    public CustomNode(){}
 
     @Autowired
-    public BoldNode(TestBean testBean) {
+    public CustomNode(TestBean testBean) {
         this.testBean = testBean;
         log.info("constructor: " + this);
     }
@@ -47,7 +45,6 @@ public class BoldNode extends BorderPane {
     @FXML
     public void initialize() {
         log.info("initialize: " + button.getText());
-        button.setFont(Font.font("sans-serif", FontWeight.BOLD, 12));
     }
 
     public void log(ActionEvent actionEvent) {

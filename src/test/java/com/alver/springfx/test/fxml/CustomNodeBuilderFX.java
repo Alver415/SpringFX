@@ -1,4 +1,4 @@
-package com.alver.springfx.test;
+package com.alver.springfx.test.fxml;
 
 import com.alver.springfx.SpringFXProxyBuilder;
 import org.springframework.context.ApplicationContext;

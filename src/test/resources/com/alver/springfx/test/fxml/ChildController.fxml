@@ -4,9 +4,9 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.VBox?>
-<?import com.alver.springfx.test.CustomNode?>
+<?import com.alver.springfx.test.fxml.CustomNode?>
 <BorderPane xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.alver.springfx.test.ChildController">
+            fx:controller="com.alver.springfx.test.fxml.ChildController">
     <top>
         <VBox>
             <Button fx:id="button" text="Incorrect Child Button" onAction="#log"/>
