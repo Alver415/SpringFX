@@ -1877,17 +1877,18 @@ public class SpringFXLoader {
                     BeanAdapter targetAdapter = new BeanAdapter(this.value);
                     ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
 
-                    if (propertyModel instanceof Property<?>) {
-                        Class<?> type = targetAdapter.getType(attribute.name);
-                        Expression expression = Expression.valueOf(value);
-                        ExpressionValue expressionValue = new ExpressionValue(namespace, expression, type);
-                        ((Property<Object>) propertyModel).bind(expressionValue);
-                    }
-                }
-            } else if (isBidirectionalBindingExpression(value)) {
-                try {
-                    value = value.substring(BI_DIRECTIONAL_BINDING_PREFIX.length(),
-                            value.length() - BI_DIRECTIONAL_BINDING_SUFFIX.length());
+					if (propertyModel instanceof Property property) {
+						Class<?> type = targetAdapter.getType(attribute.name);
+						Expression expression = Expression.valueOf(value);
+						ExpressionValue expressionValue = new ExpressionValue(namespace, expression, type);
+						property.bind(expressionValue);
+					}
+				}
+			} else if (isBidirectionalBindingExpression(value)) {
+				try {
+					value = value.substring(
+							BI_DIRECTIONAL_BINDING_PREFIX.length(),
+							value.length() - BI_DIRECTIONAL_BINDING_SUFFIX.length());
 
                     String[] split = value.split(DEFAULT_VALUE_DELIMITER, 2);
                     String key = split[0];
@@ -1897,32 +1898,31 @@ public class SpringFXLoader {
                     BeanAdapter targetAdapter = new BeanAdapter(this.value);
                     ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
 
-                    if (propertyModel instanceof Property fxmlProperty) {
-                        Expression expression = Expression.valueOf(value + PROPERTY_SUFFIX);
-                        ExpressionValue expressionValue = new ExpressionValue(namespace, expression, Property.class);
+					if (propertyModel instanceof Property fxmlProperty) {
+						Expression expression = Expression.valueOf(value + PROPERTY_SUFFIX);
+						ExpressionValue expressionValue = new ExpressionValue(namespace, expression, Property.class);
 
-                        if (expressionValue.getValue() instanceof Property bindProperty) {
-                            log.debug("Bidirectional binding to: %s".formatted(key));
-                            fxmlProperty.bindBidirectional(bindProperty);
-                            if (this.value instanceof Node node) {
-                                node.pseudoClassStateChanged(PseudoClass.getPseudoClass("bound"), true);
-                            }
-                        } else if (defaultValue != null) {
-                            log.warn("Cannot bidirectionally bind non-Property entry for key: %s. Using default value: %s".formatted(key, defaultValue));
-                            fxmlProperty.setValue(defaultValue);
-                        } else {
-                            log.error("Cannot bidirectionally bind non-Property entry for key: %s.".formatted(key));
-                        }
-                    } else {
-                        throw constructLoadException("Cannot bidirectionally bind to " + propertyModel.getClass());
-                    }
-                } catch (Exception e) {
-                    log.error("Failed to bind bidirectional mapping with value:%s".formatted(value), e);
-                }
-            } else {
-                processValue(attribute.sourceType, attribute.name, value);
-            }
-        }
+						if (expressionValue.getValue() instanceof Property bindProperty) {
+							log.debug("Bidirectional binding %s to %s".formatted(attribute.name, key));
+							BidirectionalBinding.bind(fxmlProperty, bindProperty);
+						} else if (defaultValue != null) {
+							log.warn(("Cannot bidirectionally bind %s to key %s because it's not a property. " +
+									"Using default value: %s").formatted(attribute.name, key, defaultValue));
+							fxmlProperty.setValue(defaultValue);
+						} else {
+							log.error("Cannot bidirectionally bind %s to key %s because it's not a property.".formatted(
+									attribute.name, key));
+						}
+					} else {
+						throw constructLoadException("Cannot bidirectionally bind to " + propertyModel.getClass());
+					}
+				} catch (Exception e) {
+					log.error("Failed to bind bidirectional mapping with value: %s".formatted(value), e);
+				}
+			} else {
+				processValue(attribute.sourceType, attribute.name, value);
+			}
+		}
 
         private boolean isBindingExpression(String aValue) {
             return aValue.startsWith(BINDING_EXPRESSION_PREFIX)
