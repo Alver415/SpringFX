@@ -26,12 +26,10 @@ public class BidirectionalBindingTestApplication extends SpringFXApplication {
 		return new SpringApplicationBuilder(SpringApplication.class).headless(false).run();
 	}
 
-
 	@Override
 	public void start(Stage primaryStage) {
 		ApplicationContext applicationContext = getApplicationContext();
 		SpringFX springFX = applicationContext.getBean(SpringFX.class);
-
 		FXMLControllerAndView<BidirectionalBindingTestController, Scene> load = springFX.load(
 				BidirectionalBindingTestController.class);
 		primaryStage.setTitle(getClass().getSimpleName());

@@ -43,8 +43,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.regex.Pattern;
-
-import static com.sun.javafx.fxml.BeanAdapter.PROPERTY_SUFFIX;
+import java.util.stream.Stream;
 
 
 /**
@@ -1880,10 +1879,20 @@ public class SpringFXLoader {
 					ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
 
 					if (propertyModel instanceof Property fxmlProperty) {
-						Expression expression = Expression.valueOf(value + PROPERTY_SUFFIX);
-						ExpressionValue expressionValue = new ExpressionValue(namespace, expression, Property.class);
+						List<String> keyList = Stream.of(key).flatMap(s -> Arrays.stream(s.split("\\."))).toList();
+						KeyPath keyPath = new KeyPath(new ArrayList<>(keyList.subList(0, keyList.size() - 1)));
+						String lastKey = keyList.get(keyList.size() - 1);
 
-						if (expressionValue.getValue() instanceof Property bindProperty) {
+						Object parent = Expression.get(namespace, keyPath);
+						Object property;
+						if (parent instanceof List<?> list){
+							property = list.get(Integer.parseInt(lastKey));
+						} else if (parent instanceof Map<?,?> map){
+							property = map.get(lastKey);
+						} else {
+							property = new BeanAdapter(parent).getPropertyModel(lastKey);
+						}
+						if (property instanceof Property bindProperty) {
 							log.debug("Bidirectional binding %s to %s".formatted(attribute.name, key));
 							BidirectionalBinding.bind(fxmlProperty, bindProperty);
 						} else if (defaultValue != null) {
