@@ -1836,81 +1836,124 @@ public class SpringFXLoader {
 		public void processPropertyAttribute(Attribute attribute) throws IOException {
 			String value = attribute.value;
 			if (isBindingExpression(value)) {
-				if (attribute.sourceType != null) {
-					throw constructLoadException("Cannot bind to static property.");
-				}
-
-				if (!isTyped()) {
-					throw constructLoadException("Cannot bind to untyped object.");
-				}
-
-				// TODO We may want to identify binding properties in processAttribute()
-				// and apply them after build() has been called
-				if (this.value instanceof Builder) {
-					throw constructLoadException("Cannot bind to builder property.");
-				}
-
-				if (!isStaticLoad()) {
-					value = value.substring(
-							BINDING_EXPRESSION_PREFIX.length(),
-							value.length() - BINDING_EXPRESSION_SUFFIX.length());
-					BeanAdapter targetAdapter = new BeanAdapter(this.value);
-					ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
-
-					if (propertyModel instanceof Property property) {
-						Class<?> type = targetAdapter.getType(attribute.name);
-						Expression expression = Expression.valueOf(value);
-						ExpressionValue expressionValue = new ExpressionValue(namespace, expression, type);
-						property.bind(expressionValue);
-					}
-				}
+				handleBindingExpression(attribute, value);
 			} else if (isBidirectionalBindingExpression(value)) {
-				try {
-					value = value.substring(
-							BI_DIRECTIONAL_BINDING_PREFIX.length(),
-							value.length() - BI_DIRECTIONAL_BINDING_SUFFIX.length());
-
-					String[] split = value.split(DEFAULT_VALUE_DELIMITER, 2);
-					String key = split[0];
-					String defaultValue = split.length == 2 ? split[1] : null;
-
-					// Create the binding
-					BeanAdapter targetAdapter = new BeanAdapter(this.value);
-					ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
-
-					if (propertyModel instanceof Property fxmlProperty) {
-						List<String> keyList = Stream.of(key).flatMap(s -> Arrays.stream(s.split("\\."))).toList();
-						KeyPath keyPath = new KeyPath(new ArrayList<>(keyList.subList(0, keyList.size() - 1)));
-						String lastKey = keyList.get(keyList.size() - 1);
-
-						Object parent = Expression.get(namespace, keyPath);
-						Object property;
-						if (parent instanceof List<?> list){
-							property = list.get(Integer.parseInt(lastKey));
-						} else if (parent instanceof Map<?,?> map){
-							property = map.get(lastKey);
-						} else {
-							property = new BeanAdapter(parent).getPropertyModel(lastKey);
-						}
-						if (property instanceof Property bindProperty) {
-							log.debug("Bidirectional binding %s to %s".formatted(attribute.name, key));
-							BidirectionalBinding.bind(fxmlProperty, bindProperty);
-						} else if (defaultValue != null) {
-							log.warn(("Cannot bidirectionally bind %s to key %s because it's not a property. " +
-									"Using default value: %s").formatted(attribute.name, key, defaultValue));
-							fxmlProperty.setValue(defaultValue);
-						} else {
-							log.error("Cannot bidirectionally bind %s to key %s because it's not a property.".formatted(
-									attribute.name, key));
-						}
-					} else {
-						throw constructLoadException("Cannot bidirectionally bind to " + propertyModel.getClass());
-					}
-				} catch (Exception e) {
-					log.error("Failed to bind bidirectional mapping with value: %s".formatted(value), e);
-				}
+				handleBidirectionalBindingExpression(attribute, value);
 			} else {
 				processValue(attribute.sourceType, attribute.name, value);
+			}
+		}
+
+		private void handleBidirectionalBindingExpression(Attribute attribute, String value) {
+			try {
+				value = value.substring(
+						BI_DIRECTIONAL_BINDING_PREFIX.length(),
+						value.length() - BI_DIRECTIONAL_BINDING_SUFFIX.length());
+
+				String[] split = value.split(DEFAULT_VALUE_DELIMITER, 2);
+				String key = split[0];
+				String defaultValue = split.length == 2 ? split[1] : null;
+
+				// Create the binding
+				BeanAdapter targetAdapter = new BeanAdapter(this.value);
+				ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
+
+				if (propertyModel instanceof Property fxmlProperty) {
+					List<String> keyList = Stream.of(key).flatMap(s -> Arrays.stream(s.split("\\."))).toList();
+					List<String> parentKeyList = keyList.subList(0, keyList.size() - 1);
+					KeyPath keyPath = new KeyPath(new ArrayList<>(parentKeyList));
+					String propertyName = keyList.get(keyList.size() - 1);
+
+					int lastIndex = key.lastIndexOf("\\.");
+					if (lastIndex >= 0){
+						String parentKey = key.substring(0, lastIndex);
+						ExpressionValue parentBeanExpressionValue = new ExpressionValue(
+								namespace, Expression.valueOf(parentKey), Object.class);
+
+						parentBeanExpressionValue.addListener((observable, oldBean, newBean) -> {
+							ObservableValue<Object> oldObservable =
+									new BeanAdapter(oldBean).getPropertyModel(propertyName);
+							BidirectionalBinding.unbind(fxmlProperty, oldObservable);
+
+							ObservableValue<Object> newObservable =
+									new BeanAdapter(newBean).getPropertyModel(propertyName);
+							if (newObservable instanceof Property newProperty) {
+								Object property = resolvePropertyObject(namespace, keyPath, propertyName);
+								bindBidirectional(fxmlProperty, property, defaultValue, attribute.name, key);
+							}
+						});
+					}
+
+					Object property = resolvePropertyObject(namespace, keyPath, propertyName);
+					bindBidirectional(fxmlProperty, property, defaultValue, attribute.name, key);
+				} else {
+					throw constructLoadException("Cannot bidirectionally bind to " + propertyModel.getClass());
+				}
+			} catch (Exception e) {
+				log.error("Failed to bind bidirectional mapping with value: %s".formatted(value), e);
+			}
+		}
+
+		private void bindBidirectional(
+				Property fxmlProperty,
+				Object propertyObject,
+				String defaultValue,
+				String attributeName,
+				String key) {
+			if (propertyObject instanceof Property bindProperty) {
+				log.debug("Bidirectional binding %s to %s".formatted(attributeName, key));
+				BidirectionalBinding.bind(fxmlProperty, bindProperty);
+			} else if (defaultValue != null) {
+				log.warn(("Cannot bidirectionally bind %s to key %s because it's not a property. " +
+						"Using default value: %s").formatted(attributeName, key, defaultValue));
+				fxmlProperty.setValue(defaultValue);
+			} else {
+				log.error("Cannot bidirectionally bind %s to key %s because it's not a property: %s".formatted(
+						attributeName, key, propertyObject));
+			}
+		}
+
+		private Object resolvePropertyObject(Object namespace, KeyPath keyPath, String propertyName) {
+			Object parent = Expression.get(namespace, keyPath);
+			Object property;
+			if (parent instanceof List<?> list) {
+				property = list.get(Integer.parseInt(propertyName));
+			} else if (parent instanceof Map<?, ?> map) {
+				property = map.get(propertyName);
+			} else {
+				property = new BeanAdapter(parent).getPropertyModel(propertyName);
+			}
+			return property;
+		}
+
+		private void handleBindingExpression(Attribute attribute, String value) throws LoadException {
+			if (attribute.sourceType != null) {
+				throw constructLoadException("Cannot bind to static property.");
+			}
+
+			if (!isTyped()) {
+				throw constructLoadException("Cannot bind to untyped object.");
+			}
+
+			// TODO We may want to identify binding properties in processAttribute()
+			// and apply them after build() has been called
+			if (this.value instanceof Builder) {
+				throw constructLoadException("Cannot bind to builder property.");
+			}
+
+			if (!isStaticLoad()) {
+				value = value.substring(
+						BINDING_EXPRESSION_PREFIX.length(),
+						value.length() - BINDING_EXPRESSION_SUFFIX.length());
+				BeanAdapter targetAdapter = new BeanAdapter(this.value);
+				ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
+
+				if (propertyModel instanceof Property property) {
+					Class<?> type = targetAdapter.getType(attribute.name);
+					Expression expression = Expression.valueOf(value);
+					ExpressionValue expressionValue = new ExpressionValue(namespace, expression, type);
+					property.bind(expressionValue);
+				}
 			}
 		}
 
