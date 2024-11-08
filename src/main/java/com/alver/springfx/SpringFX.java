@@ -56,7 +56,7 @@ public class SpringFX {
 			Class<Controller> clazz,
 			Controller controller) {
 		Objects.requireNonNull(AnnotationUtils.findAnnotation(clazz, FXMLAutoLoad.class),
-				"%s is not annotated with @FXMLLoaded.".formatted(clazz.getSimpleName()));
+				"%s is not annotated with @FXMLLoad.".formatted(clazz.getSimpleName()));
 
 		URL location = getLocation(clazz);
 		ResourceBundle resources = getResources(clazz);
