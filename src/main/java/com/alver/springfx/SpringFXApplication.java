@@ -9,7 +9,9 @@ public abstract class SpringFXApplication extends Application {
 
 	@Override
 	public void init() {
-		this.applicationContext = initApplicationContext();
+		if (applicationContext == null) {
+			this.applicationContext = initApplicationContext();
+		}
 	}
 
 	public abstract ApplicationContext initApplicationContext();
